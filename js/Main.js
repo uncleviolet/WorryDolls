@@ -1,5 +1,7 @@
 var MouseState = Object.freeze({up: 0, down: 1});
 
+var ScreenState = Object.freeze({bagScreen: 0, dollsLineUp: 1});
+
 var Main = function() {
 	this.mainCanvas = document.getElementById("mainCanvas");
 
@@ -22,6 +24,7 @@ var Main = function() {
 	var main = this;
 
 	this.displayList = [];
+	this.dolls = [];
 
 	this.mouseIsDown = false;
 	this.enableMouseEvents = true;
@@ -32,11 +35,12 @@ var Main = function() {
 	this.bagY = windowHeight - 250;
 	this.bagScale = 0.4;
 
+	this.nDolls = 6;
+
 	this.dollsRowY = 200;
 	this.dollsRowXLeft = 100;
 	this.dollsRowXRight = windowWidth - 100;
 	this.dollsRowScale = 0.15;
-
 
 	var imageSourceList = ['img/doll1.png',
 							'img/doll2.png',
@@ -62,6 +66,7 @@ var Main = function() {
 
 		main.initDolls();
 		main.initBag();
+		main.initScreen();
 		main.initMouseEvents();
 
 
@@ -99,17 +104,18 @@ Main.prototype.draw = function() {
 };
 
 Main.prototype.initDolls = function() {
-	var dollSprites = this.imageSprites.slice(0,6);
+	var dollSprites = this.imageSprites.slice(0,this.nDolls);
 
 	for (var i = 0; i < dollSprites.length; i++) {
 		var dollSpacing = (this.dollsRowXRight - this.dollsRowXLeft)/(dollSprites.length - 1);
-		var dollX = this.dollsRowXLeft + i*dollSpacing;
-		var dollY = this.dollsRowY;
-		var doll = new Doll(dollSprites[i], dollX, dollY, this.dollsRowScale);
+		var dollLineUpX = this.dollsRowXLeft + i*dollSpacing;
+		var dollLineUpY = this.dollsRowY;
+		var doll = new Doll(dollSprites[i], main.bagX, main.bagY, this.dollsRowScale, dollLineUpX, dollLineUpY);
 		doll.main = this;
 		doll.ctx = this.ctx;
 		doll.mainCanvas = this.mainCanvas;
 		this.displayList.push(doll);
+		this.dolls.push(doll);
 	}
 };
 
@@ -122,6 +128,50 @@ Main.prototype.initBag = function() {
 	bag.ctx = this.ctx;
 	bag.mainCanvas = this.mainCanvas;
 	this.displayList.push(bag);
+};
+
+Main.prototype.initScreen = function() {
+	this.screenState = ScreenState.bagScreen;
+};
+
+Main.prototype.transitionToScreen = function(screenState) {
+	this.enableMouseEvents = false;
+	switch (screenState) {
+		case ScreenState.dollsLineUp:
+			if (this.screenState == ScreenState.bagScreen) {
+				this.bagScreenToDollLineUpTransition();
+			}
+			break;
+	} 
+};
+
+Main.prototype.setScreenState = function(screenState) {
+	this.screenState = screenState;
+	this.enableMouseEvents = true;
+};
+
+Main.prototype.bagScreenToDollLineUpTransition = function() {
+	var nComplete = 0;
+	var nDolls = this.dolls.length;
+	var main = this;
+	var delayStart = 500;
+	var totalDelayRange = 1500;
+
+	this.bag.open();
+
+	for (var i = 0; i < nDolls; i++) {
+		var doll = this.dolls[i];
+		function callback() {
+			nComplete++;
+			if (nComplete == nDolls) {
+				main.bag.nDolls = 0;
+				main.setScreenState(ScreenState.dollsLineUp);
+			}
+		};
+		doll.isVisible = true;
+		var delay = delayStart + Math.random()*totalDelayRange;
+		doll.jumpOutOfBag(delay, callback);
+	}
 };
 
 Main.prototype.initMouseEvents = function() {

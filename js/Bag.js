@@ -18,10 +18,15 @@ var Bag = function(sprites, x, y, scale) {
 	this.closingTimes = [200,200];
 	this.openingDuration = 400;
 	this.closingDuration = 400;
+	this.isPulsing = false;
+	this.pulseDuration = 150;
+
+	this.nDolls = 6;
 };
 
 Bag.prototype.update = function(progress) {
 	this.sprite = this.getSprite(progress);
+	this.getSize(progress);
 	if (this.mouseState === MouseState.down) {
 		this.timeSinceMouseDown += progress;
 	}
@@ -29,6 +34,24 @@ Bag.prototype.update = function(progress) {
 
 Bag.prototype.draw = function() {
 	this.ctx.drawImage(this.sprite, this.x - 0.5*this.width, this.y - 0.5*this.height, this.width, this.height);
+};
+
+Bag.prototype.getSize = function(progress) {
+	var scaleFac = 1.0;
+	if (this.isPulsing) {
+		this.timeSinceStartPulsing += progress;
+		if (this.timeSinceStartPulsing > this.pulseDuration) {
+			this.isPulsing = false;
+			this.scaleFac = 1.0;
+			if (this.shouldClose) {
+				this.close();
+			}
+		} else {
+			scaleFac = 1.0 + 0.05*this.timeSinceStartPulsing/this.pulseDuration;
+		}
+	}
+	this.width = scaleFac*this.sprite.width*this.scale;
+	this.height = scaleFac*this.sprite.height*this.scale;	
 };
 
 Bag.prototype.getSprite = function(progress) {
@@ -81,6 +104,20 @@ Bag.prototype.open = function() {
 Bag.prototype.close = function() {
 	this.state = BagStates.closing;
 	this.timeSinceStartClosing = 0;
+	this.shouldClose = false;
+};
+
+Bag.prototype.pulse = function() {
+	this.isPulsing = true;
+	this.timeSinceStartPulsing = 0;
+};
+
+Bag.prototype.addDoll = function() {
+	this.pulse();
+	this.nDolls++;
+	if (this.nDolls >= main.nDolls) {
+		this.shouldClose = true;
+	}
 };
 
 Bag.prototype.isUnderCoords = function(x, y) {
@@ -103,10 +140,20 @@ Bag.prototype.mouseUp = function(x, y) {
 		if (this.timeSinceMouseDown > 200) {
 			return;
 		}
-		if (this.state === BagStates.closed) {
-			this.open();
-		} else if (this.state === BagStates.open) {
-			this.close();
-		}
+		this.click();
 	}
+};
+
+Bag.prototype.click = function() {
+	if (this.main.screenState == ScreenState.bagScreen) {
+		this.main.transitionToScreen(ScreenState.dollsLineUp);
+	}
+
+
+
+//	if (this.state === BagStates.closed) {
+//		this.open();
+//	} else if (this.state === BagStates.open) {
+//		this.close();
+//	}	
 };

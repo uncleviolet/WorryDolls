@@ -1,15 +1,20 @@
-var Doll = function(sprite, x, y, scale) {
+var Doll = function(sprite, x, y, scale, lineUpX, lineUpY) {
 	this.sprite = sprite;
 	this.x = x;
 	this.y = y;
 	this.scale = scale;
+	this.lineUpX = lineUpX;
+	this.lineUpY = lineUpY;
+
 	this.width = this.scale*this.sprite.width;
 	this.height = this.scale*this.sprite.height;
 	this.dragExpandTime = 60;
 	this.jumpIntoBagDuration = 800;
+	this.jumpingOutOfBagDuration = 800;
 	this.jumpingIntoBag = false;
+	this.jumpingOutOfBag = false;
 	this.hasBeenMovedBack = false;
-	this.isVisible = true;
+	this.isVisible = false;
 };
 
 Doll.prototype.update = function(progress) {
@@ -62,6 +67,7 @@ Doll.prototype.getPosition = function(progress) {
 		this.timeSpentJumpingIntoBag += progress;
 		if (this.timeSpentJumpingIntoBag > this.jumpIntoBagDuration) {
 			this.isVisible = false;
+			this.main.bag.addDoll();
 			return;
 		}
 		var bagX = main.bag.x;
@@ -81,6 +87,23 @@ Doll.prototype.getPosition = function(progress) {
 			}
 			this.y = jumpApexY - (jumpApexY - bagY)*Math.pow(timeFac, 2);
 		}
+	} else if (this.jumpingOutOfBag) {
+		this.timeSpentJumpingOutOfBag += progress;
+		if (this.timeSpentJumpingOutOfBag > this.jumpingOutOfBagDuration + this.jumpingOutOfBagDelay) {
+			this.jumpingOutOfBag = false;
+			this.callback();
+			return;
+		}
+		if (this.timeSpentJumpingOutOfBag < this.jumpingOutOfBagDelay) {
+			return;
+		}
+		var timeFac = (this.jumpingOutOfBagDuration - this.timeSpentJumpingOutOfBag 
+			+ this.jumpingOutOfBagDelay)/(this.jumpingOutOfBagDuration);	
+
+		this.x = main.bag.x + (this.lineUpX - main.bag.x)*(this.timeSpentJumpingOutOfBag - this.jumpingOutOfBagDelay
+			)/this.jumpingOutOfBagDuration;
+		this.y = this.lineUpY - (this.lineUpY - main.bag.y)*Math.pow(timeFac,2);
+
 	}
 };
 
@@ -99,6 +122,13 @@ Doll.prototype.getSize = function(progress) {
 
 	this.width = scaleFactor*this.scale*this.sprite.width;
 	this.height = scaleFactor*this.scale*this.sprite.height;
+};
+
+Doll.prototype.jumpOutOfBag = function(delay, callback) {
+	this.jumpingOutOfBag = true;
+	this.jumpingOutOfBagDelay = delay;
+	this.callback = callback;
+	this.timeSpentJumpingOutOfBag = 0;
 };
 
 Doll.prototype.jumpIntoBag = function() {
