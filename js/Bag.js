@@ -25,11 +25,43 @@ var Bag = function(sprites, x, y, scale) {
 };
 
 Bag.prototype.update = function(progress) {
-	this.sprite = this.getSprite(progress);
-	this.getSize(progress);
+	// Check mouse state
 	if (this.mouseState === MouseState.down) {
 		this.timeSinceMouseDown += progress;
 	}
+
+	if (this.state === BagStates.opening) {
+		this.timeSinceStartOpening += progress;
+		if (this.timeSinceStartOpening > this.openingDuration) {
+			this.state = BagStates.open;
+		}
+	} else if (this.state === BagStates.closing) {
+		this.timeSinceStartClosing += progress;
+		if (this.timeSinceStartClosing > this.closingDuration) {
+			this.state = BagStates.closed;
+			main.setScreenState(ScreenState.bagScreen);
+		}
+	}
+
+	if (this.isPulsing) {
+		this.timeSinceStartPulsing += progress;
+		if (this.timeSinceStartPulsing > this.pulseDuration) {
+			this.isPulsing = false;
+			if (this.shouldClose) {
+				this.close();
+			}
+		}
+	}
+
+	if (this.isExitingDownwards) {
+		this.timeSinceStartExit += progress;
+		if (this.timeSinceStartExit > this.exitDuration) {
+			this.isExitingDownwards = false;
+		}
+	}
+	this.sprite = this.getSprite(progress);
+	this.getSize(progress);
+	this.getPosition(progress);
 };
 
 Bag.prototype.draw = function() {
@@ -39,19 +71,18 @@ Bag.prototype.draw = function() {
 Bag.prototype.getSize = function(progress) {
 	var scaleFac = 1.0;
 	if (this.isPulsing) {
-		this.timeSinceStartPulsing += progress;
-		if (this.timeSinceStartPulsing > this.pulseDuration) {
-			this.isPulsing = false;
-			this.scaleFac = 1.0;
-			if (this.shouldClose) {
-				this.close();
-			}
-		} else {
-			scaleFac = 1.0 + 0.05*this.timeSinceStartPulsing/this.pulseDuration;
-		}
+		scaleFac = 1.0 + 0.05*this.timeSinceStartPulsing/this.pulseDuration;
 	}
 	this.width = scaleFac*this.sprite.width*this.scale;
 	this.height = scaleFac*this.sprite.height*this.scale;	
+};
+
+Bag.prototype.getPosition = function(progress) {
+	if (this.isExitingDownwards) {
+		var exitEndY = main.windowHeight + this.height/2 + 50;
+		var timeFac = this.timeSinceStartExit/this.exitDuration;
+		this.y = main.bagY - (main.bagY - exitEndY)*Math.pow(timeFac, 2);
+	}
 };
 
 Bag.prototype.getSprite = function(progress) {
@@ -73,11 +104,7 @@ Bag.prototype.getSprite = function(progress) {
 };
 
 Bag.prototype.openingSprite = function(progress) {
-	this.timeSinceStartOpening += progress;
-	if (this.timeSinceStartOpening > this.openingDuration) {
-		this.state = BagStates.open;
-		return this.sprites[2];
-	} else if (this.timeSinceStartOpening > this.openingTimes[0]) {
+	if (this.timeSinceStartOpening > this.openingTimes[0]) {
 		return this.sprites[1];
 	} else {
 		return this.sprites[0];
@@ -85,11 +112,7 @@ Bag.prototype.openingSprite = function(progress) {
 };
 
 Bag.prototype.closingSprite = function(progress) {
-	this.timeSinceStartClosing += progress;
-	if (this.timeSinceStartClosing > this.closingDuration) {
-		this.state = BagStates.closed;
-		return this.sprites[0];
-	} else if (this.timeSinceStartClosing > this.closingTimes[0]) {
+	if (this.timeSinceStartClosing > this.closingTimes[0]) {
 		return this.sprites[1];
 	} else {
 		return this.sprites[2];
@@ -118,6 +141,13 @@ Bag.prototype.addDoll = function() {
 	if (this.nDolls >= main.nDolls) {
 		this.shouldClose = true;
 	}
+};
+
+Bag.prototype.exitDownwards = function(delay, duration) {
+	this.exitDelay = delay;
+	this.exitDuration = duration;
+	this.isExitingDownwards = true;
+	this.timeSinceStartExit = 0;
 };
 
 Bag.prototype.isUnderCoords = function(x, y) {
