@@ -53,10 +53,10 @@ Bag.prototype.update = function(progress) {
 		}
 	}
 
-	if (this.isExitingDownwards) {
-		this.timeSinceStartExit += progress;
-		if (this.timeSinceStartExit > this.exitDuration) {
-			this.isExitingDownwards = false;
+	if (this.isTranslating) {
+		this.timeSpentTranslating += progress;
+		if (this.timeSpentTranslating > this.translateDuration + this.translateDelay) {
+			this.isTranslating = false;
 		}
 	}
 	this.sprite = this.getSprite(progress);
@@ -78,16 +78,18 @@ Bag.prototype.getSize = function(progress) {
 };
 
 Bag.prototype.getPosition = function(progress) {
-	if (this.isExitingDownwards) {
-		var exitEndY = main.windowHeight + this.height/2 + 50;
-		var timeFac = this.timeSinceStartExit/this.exitDuration;
-		this.y = main.bagY - (main.bagY - exitEndY)*Math.pow(timeFac, 2);
+	if (this.isTranslating) {
+		if (this.timeSpentTranslating < this.translateDelay) {
+			return;
+		}
+		this.x = this.translateEasingFunction(this.timeSpentTranslating - this.translateDelay, this.translateStartX, 
+			this.translateEndX - this.translateStartX, this.translateDuration);
+		this.y = this.translateEasingFunction(this.timeSpentTranslating - this.translateDelay, this.translateStartY, 
+			this.translateEndY - this.translateStartY, this.translateDuration);
 	}
 };
 
 Bag.prototype.getSprite = function(progress) {
-
-
 	switch (this.state) {
 		case BagStates.open:
 			return this.sprites[2];
@@ -143,11 +145,16 @@ Bag.prototype.addDoll = function() {
 	}
 };
 
-Bag.prototype.exitDownwards = function(delay, duration) {
-	this.exitDelay = delay;
-	this.exitDuration = duration;
-	this.isExitingDownwards = true;
-	this.timeSinceStartExit = 0;
+Bag.prototype.translate = function(endX, endY, duration, delay, ease) {
+	this.isTranslating = true;
+	this.translateEndX = endX;
+	this.translateEndY = endY;
+	this.translateStartX = this.x;
+	this.translateStartY = this.y;
+	this.translateDuration = duration;
+	this.translateDelay = delay;
+	this.translateEasingFunction = ease;
+	this.timeSpentTranslating = 0;
 };
 
 Bag.prototype.isUnderCoords = function(x, y) {

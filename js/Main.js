@@ -2,6 +2,25 @@ var MouseState = Object.freeze({up: 0, down: 1});
 
 var ScreenState = Object.freeze({bagScreen: 0, dollsLineUp: 1, dollCloseUp: 2});
 
+var easeInOutCubicValue = function(t, b, c, d) {
+	var ts = (t /= d)*t;
+	var tc = ts*t;
+	return b + c*(-2*tc + 3*ts);
+};
+
+var easeInCubicValue = function(t, b, c, d) {
+	var tc = (t /= d)*t*t;
+	return b + c*(tc);	
+}
+
+var easeOutCubicValue = function(t, b, c, d) {
+	var ts = (t /= d)*t;
+	var tc = ts*t;
+	return b+c*(tc + -3*ts + 3*t);
+}
+
+var Ease = Object.freeze({in: easeInCubicValue, out: easeOutCubicValue, inOut: easeInOutCubicValue});
+
 var Main = function() {
 	this.mainCanvas = document.getElementById("mainCanvas");
 
@@ -146,6 +165,8 @@ Main.prototype.transitionToScreen = function(screenState) {
 		case ScreenState.dollsLineUp:
 			if (this.screenState == ScreenState.bagScreen) {
 				this.bagScreenToDollLineUpTransition();
+			} else if (this.screenState == ScreenState.dollCloseUp) {
+				this.dollCloseUpToLineUpTransition();
 			}
 			break;
 		case ScreenState.dollCloseUp:
@@ -188,20 +209,40 @@ Main.prototype.bagScreenToDollLineUpTransition = function() {
 Main.prototype.dollsLineUpToCloseUpTransition = function() {
 	var bagDelay = 0;
 	var bagDuration = 800;
-	this.bag.exitDownwards(bagDelay, bagDuration);
+	this.bag.translate(this.bag.x, this.windowHeight+this.bag.height/2+50, bagDuration, bagDelay, Ease.in);
 
 	for (var i = 0; i < this.nDolls; i++) {
 		var doll = this.dolls[i];
 		if (doll === this.selectedDoll) {
 			continue;
 		}
-		var delay = 0;
-		var duration = 800;
-		doll.exitDownwards(delay, duration);
+		var delay = i*150;
+		var duration = 1000;
+		if (doll.isVisible) {
+			doll.translate(doll.x, this.windowHeight + doll.height/2 + 50, duration, delay, Ease.in);
+		}
 	}
-
 	this.selectedDoll.zoomInToCloseUp();
+};
 
+Main.prototype.dollCloseUpToLineUpTransition = function() {
+	for (var i = 0; i < this.nDolls; i++) {
+		var doll = this.dolls[i];
+		if (doll === this.selectedDoll) {
+			continue;
+		}
+		var delay = i*150;
+		var duration = 1000;
+		if (doll.isVisible) {
+			doll.x = doll.lineUpX;
+			doll.translate(doll.lineUpX, doll.lineUpY, duration, delay, Ease.out);
+		}
+	}
+	var bagDelay = 800;
+	var bagDuration = 800;
+	this.bringToFront(this.bag);
+	this.bag.translate(this.bagX, this.bagY, bagDuration, bagDelay, Ease.out);
+	this.selectedDoll.zoomOutToLineUp();
 };
 
 Main.prototype.initMouseEvents = function() {
@@ -224,7 +265,7 @@ Main.prototype.initMouseEvents = function() {
 		}
 	};
 	function mouseXY(e) {
-		if (main.enableMouseEvents) {
+		if (main.enableMouseEvents && main.mouseIsDown) {
 			main.mouseX = e.pageX - main.mainCanvas.getBoundingClientRect().left;
 			main.mouseY = e.pageY - main.mainCanvas.getBoundingClientRect().top;
 		}
