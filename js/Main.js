@@ -58,7 +58,7 @@ var Main = function() {
 	this.bagScale = 0.4;
 
 	this.dollCloseUpX = windowWidth/2;
-	this.dollCloseUpY = windowHeight/2;
+	this.dollCloseUpY = windowHeight/2 + 100;
 
 	this.nDolls = 6;
 
@@ -75,7 +75,15 @@ var Main = function() {
 							'img/doll6.png',
 							'img/bag1.png',
 							'img/bag2.png',
-							'img/bag3.png'];
+							'img/bag3.png',
+							'img/cloud.png',
+							'img/arrow.png',
+							'img/worry.png',
+							'img/z.png',
+							'img/notes1.png',
+							'img/notes2.png',
+							'img/notes3.png',
+							'img/notes4.png'];
 
 	var imageLoadedCallback = function(imageSprites) {
 		main.imageSprites = [];
@@ -93,7 +101,6 @@ var Main = function() {
 		main.initBag();
 		main.initScreen();
 		main.initMouseEvents();
-
 
 		var oldTimestamp = null;	
 		setInterval(function() {
@@ -219,10 +226,25 @@ Main.prototype.dollsLineUpToCloseUpTransition = function() {
 		var delay = i*150;
 		var duration = 1000;
 		if (doll.isVisible) {
-			doll.translate(doll.x, this.windowHeight + doll.height/2 + 50, duration, delay, Ease.in);
+			doll.translate(doll.x, this.windowHeight + doll.height/2 + 100, duration, delay, Ease.in);
 		}
 	}
 	this.selectedDoll.zoomInToCloseUp();
+
+	var cloudX = 300;
+	var cloudY = 150;
+	var cloudOpeningDuration = 300;
+	var cloudOpeningDelay = 1200;
+	var cloudSprite = this.imageSprites[9];
+
+
+	var cloud = new Cloud(cloudSprite, cloudX, cloudY, 0.3, null);
+	cloud.main = this;
+	cloud.ctx = this.ctx;
+	cloud.mainCanvas = this.mainCanvas;
+	this.displayList.push(cloud);
+	cloud.open(cloudOpeningDuration, cloudOpeningDelay);
+
 };
 
 Main.prototype.dollCloseUpToLineUpTransition = function() {
