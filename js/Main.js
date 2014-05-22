@@ -41,12 +41,14 @@ var Main = function() {
 //	this.mainCanvas.style.width = windowWidth + 'px';   /// CSS size of canvas
 //	this.mainCanvas.style.height = windowHeight + 'px';
 
+	this.backgroundColour = "rgb(135,206,250)";
 	this.ctx = this.mainCanvas.getContext('2d');
-	this.ctx.fillStyle = "rgb(135,206,250)";
+	this.ctx.fillStyle = this.backgroundColour;
 	var main = this;
 
 	this.displayList = [];
 	this.dolls = [];
+	this.clouds = [];
 
 	this.mouseIsDown = false;
 	this.enableMouseEvents = true;
@@ -57,8 +59,11 @@ var Main = function() {
 	this.bagY = windowHeight - 250;
 	this.bagScale = 0.4;
 
-	this.dollCloseUpX = windowWidth/2;
-	this.dollCloseUpY = windowHeight/2 + 100;
+	this.dollCloseUpX = windowWidth/2 - 30;
+	this.dollCloseUpY = windowHeight/2 + 120;
+
+	this.worryCentreX = 300;
+	this.worryCentreY = 150;
 
 	this.nDolls = 6;
 
@@ -79,11 +84,11 @@ var Main = function() {
 							'img/cloud.png',
 							'img/arrow.png',
 							'img/worry.png',
-							'img/z.png',
 							'img/notes1.png',
 							'img/notes2.png',
 							'img/notes3.png',
-							'img/notes4.png'];
+							'img/notes4.png',
+							'img/z.png'];
 
 	var imageLoadedCallback = function(imageSprites) {
 		main.imageSprites = [];
@@ -126,6 +131,9 @@ Main.prototype.update = function(progress) {
 	for (var i = 0; i < this.displayList.length; i++) {
 		this.displayList[i].update(progress);
 	}
+	if (this.worryController != null) {
+		this.worryController.update(progress);
+	}
 };
 
 Main.prototype.draw = function() {
@@ -161,6 +169,13 @@ Main.prototype.initBag = function() {
 	bag.mainCanvas = this.mainCanvas;
 	this.displayList.push(bag);
 };
+
+Main.prototype.initWorries = function() {
+	var worryController = new WorryController(this.imageSprites.slice(11,16));
+	worryController.main = this.main;
+	worryController.ctx = this.ctx;
+	this.worryController = worryController;
+}
 
 Main.prototype.initScreen = function() {
 	this.screenState = ScreenState.bagScreen;
@@ -231,20 +246,33 @@ Main.prototype.dollsLineUpToCloseUpTransition = function() {
 	}
 	this.selectedDoll.zoomInToCloseUp();
 
-	var cloudX = 300;
-	var cloudY = 150;
-	var cloudOpeningDuration = 300;
-	var cloudOpeningDelay = 1200;
+
 	var cloudSprite = this.imageSprites[9];
 
-
-	var cloud = new Cloud(cloudSprite, cloudX, cloudY, 0.3, null);
+	var cloud = new Cloud(cloudSprite, 300, 300, 0.04, null, false, false);
 	cloud.main = this;
 	cloud.ctx = this.ctx;
 	cloud.mainCanvas = this.mainCanvas;
 	this.displayList.push(cloud);
-	cloud.open(cloudOpeningDuration, cloudOpeningDelay);
+	cloud.open(200, 1200, false);
+	this.clouds.push(cloud);
 
+	cloud = new Cloud(cloudSprite, 350, 250, 0.08, null, false, false);
+	cloud.main = this;
+	cloud.ctx = this.ctx;
+	cloud.mainCanvas = this.mainCanvas;
+	this.displayList.push(cloud);
+	cloud.open(200, 1400, false);
+	this.clouds.push(cloud);
+
+	cloud = new Cloud(cloudSprite, this.worryCentreX, this.worryCentreY, 0.3, 
+		["tell me your",  "worries"], false, true);
+	cloud.main = this;
+	cloud.ctx = this.ctx;
+	cloud.mainCanvas = this.mainCanvas;
+	this.displayList.push(cloud);
+	cloud.open(300, 1600, true);
+	this.clouds.push(cloud);
 };
 
 Main.prototype.dollCloseUpToLineUpTransition = function() {
@@ -265,6 +293,10 @@ Main.prototype.dollCloseUpToLineUpTransition = function() {
 	this.bringToFront(this.bag);
 	this.bag.translate(this.bagX, this.bagY, bagDuration, bagDelay, Ease.out);
 	this.selectedDoll.zoomOutToLineUp();
+	for (var i = 0; i < this.clouds.length; i++) {
+		this.clouds[i].close(500, i*100);
+	}
+	this.clouds = [];
 };
 
 Main.prototype.initMouseEvents = function() {
@@ -347,4 +379,13 @@ Main.prototype.moveBackOne = function(item) {
 			break;
 		}
 	}	
-}
+};
+
+Main.prototype.removeFromDisplay = function(item) {
+	for (var i = 0; i < this.displayList.length; i++) {
+		if (this.displayList[i] === item) {
+			this.displayList.splice(i,1);
+			break;
+		}
+	}
+};
